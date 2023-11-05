@@ -40,7 +40,9 @@ public class Client extends Application {
         ClientConnection connection = new ClientConnection(socket);
         ClientHandler handler = new ClientHandler(connection, game);
         game.clientHandler = handler;
+        controller.game = game;
 
+        handler.start();
 
 
     }

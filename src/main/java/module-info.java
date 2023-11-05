@@ -10,4 +10,5 @@ module com.vg.gomoku {
     exports com.vg.gomoku;
     exports com.vg.gomoku.game;
     opens com.vg.gomoku.game to javafx.fxml;
+    exports com.vg.gomoku.server to com.google.gson;
 }

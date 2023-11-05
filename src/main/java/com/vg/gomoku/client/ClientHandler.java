@@ -1,6 +1,7 @@
 package com.vg.gomoku.client;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.vg.gomoku.game.Game;
 import com.vg.gomoku.server.Model;
 

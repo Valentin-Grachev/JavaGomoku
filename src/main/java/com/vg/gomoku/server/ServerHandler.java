@@ -2,6 +2,7 @@ package com.vg.gomoku.server;
 
 import java.io.IOException;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.vg.gomoku.client.ClientAction;
 
 public class ServerHandler extends Thread {
@@ -30,6 +31,7 @@ public class ServerHandler extends Thread {
             model.playerIdentificator = 2;
             player2.dataToClient.flush();
             player2.dataToClient.writeUTF(gson.toJson(model));
+            System.out.println("Identificated");
 
 
 
@@ -51,7 +53,7 @@ public class ServerHandler extends Thread {
                     var clientAction = gson.fromJson(player2.dataFromClient.readUTF(), ClientAction.class);
 
                     // Сделан ход
-                    model.makeMove(clientAction.moveX, clientAction.moveY, 1);
+                    model.makeMove(clientAction.moveX, clientAction.moveY, 2);
 
                     // Отправка обновленного состояния клиентам
                     sendGameStateToClients();
