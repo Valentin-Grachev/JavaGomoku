@@ -1,8 +1,6 @@
 package com.vg.gomoku.game;
 
-import com.vg.gomoku.client.ClientAction;
-import com.vg.gomoku.client.ClientHandler;
-import com.vg.gomoku.server.Model;
+import com.vg.gomoku.webservice.Server;
 import javafx.scene.paint.Color;
 
 import java.io.IOException;
@@ -15,25 +13,38 @@ public class Game {
     private Controller _controller;
     private int _playerNumber;
     private boolean _canMakeMove;
-    private boolean _endGame;
+    private boolean _gameNotStarted = true;
+    private boolean _gameFinished = false;
 
-    public ClientHandler clientHandler;
-
-
-
+    private Server _server;
 
 
-    public Game(Controller controller, int playerNumber) {
+
+
+    public Game(Controller controller, Server server) {
         _controller = controller;
-        _playerNumber = playerNumber;
+        _playerNumber = server.connectAndGetPlayerNumber();
         _controller.showMessage("Ваш ход");
+        _server = server;
         startGame();
+
+        // Поток, запрашивающий модель с сервера
+        new Thread(() -> {
+            try {
+                while (true) {
+                    Thread.sleep(200);
+                    LoadModel(_server.getCurrentModel());
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
     }
 
 
     public void restartGame() {
         _canMakeMove = true;
-        _endGame = false;
+        _gameNotStarted = false;
         startGame();
     }
 
@@ -48,32 +59,32 @@ public class Game {
 
         _pointStates.get(6).set(6, PointStateType.Black);
         _controller.drawPoint(6, 6, 2);
-        _endGame = false;
+        _gameNotStarted = false;
     }
 
-    public void LoadModel(Model model) {
-        if (_endGame && _playerNumber == 2) startGame();
+    public void LoadModel(com.vg.gomoku.webservice.Model model) {
+        if (_gameFinished) return;
 
-        // Идентификация игрока
-        if (model.playerIdentificator != 0) {
-            _playerNumber = model.playerIdentificator;
+        System.out.println("Load model: " + model.getLastMoveY() + " " + model.getLastMoveX() +
+                " " + model.getMovePlayerNowNumber());
 
-            if (model.playerIdentificator == 1) _controller.selectPlayerColor(Color.WHITE);
-            else if (model.playerIdentificator == 2) _controller.selectPlayerColor(Color.BLACK);
+        // Показ цвета игрока
+        if (_playerNumber == 1) _controller.selectPlayerColor(Color.WHITE);
+        else if (_playerNumber == 2) _controller.selectPlayerColor(Color.BLACK);
 
-        }
+        if (_gameNotStarted) startGame();
 
         // Отображение сделанного хода
         else {
-            var newPointState = model.movePlayerNowNumber == 2 ? PointStateType.White : PointStateType.Black;
-            int movedPlayerNumber = model.movePlayerNowNumber == 2 ? 1 : 2;
+            var newPointState = model.getMovePlayerNowNumber() == 2 ? PointStateType.White : PointStateType.Black;
+            int movedPlayerNumber = model.getMovePlayerNowNumber() == 2 ? 1 : 2;
 
-            _pointStates.get(model.lastMoveY).set(model.lastMoveX, newPointState);
-            _controller.drawPoint(model.lastMoveX, model.lastMoveY, movedPlayerNumber);
-            System.out.println("load model: " + model.lastMoveX + " " + model.lastMoveY);
+            _pointStates.get(model.getLastMoveY()).set(model.getLastMoveX(), newPointState);
+            _controller.drawPoint(model.getLastMoveX(), model.getLastMoveY(), movedPlayerNumber);
+            System.out.println("load model: " + model.getLastMoveX() + " " + model.getLastMoveY());
         }
 
-        _canMakeMove = model.movePlayerNowNumber == _playerNumber;
+        _canMakeMove = model.getMovePlayerNowNumber() == _playerNumber;
 
         // Пока никто не победил
         int victory = checkVictory();
@@ -89,8 +100,8 @@ public class Game {
             else if (victory == _playerNumber) _controller.showMessage("Победа!");
             else _controller.showMessage("Поражение! Будь умнее!");
 
-            if (_playerNumber == 1) _controller.makeAvailableRestart();
-            _endGame = true;
+            //if (_playerNumber == 1) _controller.makeAvailableRestart();
+            _gameFinished = true;
         }
     }
 
@@ -106,13 +117,17 @@ public class Game {
         _controller.drawPoint(x, y, _playerNumber);
 
         // Отправка данных на сервер
-        var action = new ClientAction(x, y);
-        clientHandler.send(action);
+        var action = new com.vg.gomoku.webservice.ClientAction();
+        action.setMoveX(x);
+        action.setMoveY(y);
+        action.setPlayer(_playerNumber);
+
+        _server.makeMove(action);
     }
 
 
     private boolean canMove(int x, int y) {
-        if (_pointStates.get(y).get(x) != PointStateType.Empty || _endGame) return false;
+        if (_pointStates.get(y).get(x) != PointStateType.Empty || _gameNotStarted) return false;
         return true;
     }
 

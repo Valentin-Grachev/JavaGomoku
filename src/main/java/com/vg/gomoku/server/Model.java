@@ -7,7 +7,6 @@ public class Model {
 
     public boolean gameStarted;
     public int movePlayerNowNumber;
-    public int playerIdentificator;
 
 
     public void startGame() {

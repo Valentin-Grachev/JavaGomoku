@@ -1,17 +1,16 @@
 package com.vg.gomoku;
 
-import com.vg.gomoku.client.ClientConnection;
-import com.vg.gomoku.client.ClientHandler;
 import com.vg.gomoku.game.Controller;
 import com.vg.gomoku.game.Game;
+import com.vg.gomoku.webservice.Server;
+import com.vg.gomoku.webservice.ServerService;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
+import java.net.URL;
 
 public class Client extends Application {
     public static void main(String[] args) {
@@ -33,16 +32,9 @@ public class Client extends Application {
         Controller controller = fxmlLoader.getController();
         controller.addFieldClickHandler();
 
-        InetAddress address = InetAddress.getLocalHost();
-        Socket socket = new Socket(address, Server.port);
-
-        Game game = new Game(controller, 1);
-        ClientConnection connection = new ClientConnection(socket);
-        ClientHandler handler = new ClientHandler(connection, game);
-        game.clientHandler = handler;
+        Server server = new ServerService(new URL(com.vg.gomoku.Server.url)).getServerPort();
+        Game game = new Game(controller, server);
         controller.game = game;
-
-        handler.start();
 
 
     }

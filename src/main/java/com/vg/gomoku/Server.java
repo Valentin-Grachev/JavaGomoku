@@ -1,56 +1,60 @@
 package com.vg.gomoku;
 
-import com.vg.gomoku.server.ServerConnection;
+import com.vg.gomoku.client.ClientAction;
 import com.vg.gomoku.server.Model;
-import com.vg.gomoku.server.ServerHandler;
 
+import javax.jws.WebMethod;
+import javax.jws.WebService;
+import javax.xml.ws.Endpoint;
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 
 
-
-
-
+@WebService
 public class Server {
+
+    static String url = "http://localhost:8080/Gomoku";
 
     Model model = new Model();
 
-    ServerConnection connection1;
-    ServerConnection connection2;
+    private int _playersConnected = 0;
 
-
-    public static int port = 1111;
 
     public static void main(String[] args) throws IOException {
-        new Server().startServer();
+        Server service = new Server();
+        Endpoint.publish(url, service);
+        System.out.println("Webservice published on " + url);
     }
 
-    private void startServer() throws IOException {
-        ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println("Server started");
-
-        while (true) {
-            try {
-                // Ждем подключения нового клиента.
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Client connected");
-
-                if (connection1 == null) connection1 = new ServerConnection(clientSocket);
-
-                else if (connection2 == null) {
-                    connection2 = new ServerConnection(clientSocket);
-                    model.startGame();
-                    new ServerHandler(connection1, connection2, model).start();
-                    System.out.println("Start game");
-                    break;
-                }
-
-
-            }
-            catch (IOException e) { }
-        }
-
+    @WebMethod
+    public int connectAndGetPlayerNumber() {
+        _playersConnected++;
+        prepareModel();
+        System.out.println("Player connected. Now players: " + _playersConnected);
+        if (_playersConnected == 2) System.out.println("Game started.");
+        return _playersConnected;
     }
+
+    private void prepareModel() {
+        model.gameStarted = true;
+        model.movePlayerNowNumber = 1;
+        model.lastMoveY = 6;
+        model.lastMoveX = 6;
+    }
+
+    @WebMethod
+    public void makeMove(ClientAction clientAction) {
+        model.lastMoveX = clientAction.moveX;
+        model.lastMoveY = clientAction.moveY;
+
+        if (clientAction.player == 1) model.movePlayerNowNumber = 2;
+        else if (clientAction.player == 2) model.movePlayerNowNumber = 1;
+    }
+
+    @WebMethod
+    public Model getCurrentModel() {
+        return model;
+    }
+
+
 
 }
